@@ -1,16 +1,20 @@
-# React + Vite
+# WebSocket Chat
 
-This template provides a minimal setup to get React working in Vite with HMR and some ESLint rules.
+This is a basic React application that connects to 'wss://echo.websocket.org' using the native WebSocket API.
 
-Currently, two official plugins are available:
+When the page loads, it creates a websocket connection with the server. once the connection is open, messages can be sent to the server the server echos the message back, and the received message is displayed on the page.
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+The application also shows the current connection status and handles different websocket states such as CONNECTING, OPEN, CLOSING, and CLOSED.
 
-## React Compiler
+# Technologies used
 
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
+- React
+- Javascript
+- Native Websocket API
+- Vite
 
-## Expanding the ESLint configuration
+# How to Run 
 
-If you are developing a production application, we recommend using TypeScript with type-aware lint rules enabled. Check out the [TS template](https://github.com/vitejs/vite/tree/main/packages/create-vite/template-react-ts) for information on how to integrate TypeScript and [`typescript-eslint`](https://typescript-eslint.io) in your project.
+Install the dependies 
+
+'```npm install```
