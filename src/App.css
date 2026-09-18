@@ -1,0 +1,13 @@
+.page {
+  display:flex;
+  justify-content: center;
+}
+
+.chat {
+  width: 500px;
+}
+
+.messages {
+  min-height: 300px;
+  
+}
