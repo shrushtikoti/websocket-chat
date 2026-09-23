@@ -1,115 +1,149 @@
 import { useEffect, useRef, useState } from "react";
+import { Terminal } from "@xterm/xterm";
+import "@xterm/xterm/css/xterm.css"
 import "./App.css";
 
 function App() {
-  const [status, setStatus] = useState("connecting...");
-  const [messages, setMessages] = useState([]);
-  const [input, setInput] = useState("");
-  const [socketState, setSocketState] = useState("CONNECTING");
-
-  const socketRef = useRef(null);
+  const terminalRef = useRef(null);
+  const terminalInstanceRef = useRef(null);
+  
+  const [fontSize, setFontSize] = useState(14);
 
   useEffect(() => {
-    socketRef.current = new WebSocket(
-      "wss://echo.websocket.org"
+    const terminal = new Terminal({
+    fontSize: 14,
+    cursorBlink: true,
+  });
+
+    terminalInstanceRef.current = terminal;
+
+    terminal.open(terminalRef.current);
+
+    terminal.focus();
+
+    const socket = new WebSocket(
+      "ws://dev.cyberrange.fsid-iisc.in:8181/ws",
+      "tty"
     );
 
-    socketRef.current.onopen = () => {
+    socket.onopen = () => {
       console.log("WebSocket connected");
-      setStatus("Connected");
-      setSocketState("OPEN");
-    };
+      terminal.write("Connected to WebSocket\r\n");
 
-    socketRef.current.onmessage = (event) => {
-      console.log("Message received:",event.data);
+    const initMessage = '{"AuthToken":"","columns":80,"rows":24}';
 
-      setMessages((oldMessages) => [
-        ...oldMessages,
-        "ECHO: " + event.data
-      ]);
-    };
+    socket.send(initMessage);
+  };
 
-    socketRef.current.onerror = () => {
-      console.log("WebSocket error");
-      setStatus("Error");
-    };
 
-    socketRef.current.onclose = () => {
-      console.log("WebSocket closed");
-      setStatus("Offline");
-      setSocketState("CLOSED");
+    // socket.onmessage = async (event) => {
+    //   const data = new Uint8Array(await event.data.arrayBuffer());
+    //   console.log("Received:", data);
+    //   terminal.write(data.slice(1));
+    // };
 
-      setMessages((oldMessages) => [
-        ...oldMessages,
-        "Server is offline"
-      ]);
-    };
+    socket.onmessage=async(event)=> {
 
-    return () => {
-      socketRef.current.close();
-    };
-  }, []);
-
-  function sendMessage() {
-    const state = socketRef.current.readyState;
-
-    if (state === WebSocket.CONNECTING) {
-      console.log("WebSocket is still connecting");
-      return;
+      try{
+        if(event.data instanceof Blob){
+          const data =new Uint8Array(await event.data.arrayBuffer());
+          terminal.write(data.slice(1))
+        }
+        else{
+          terminal.write(event.data)        
+        }
+      }
+      catch(err){
+        console.error("Error handling message",err);
+      }
     }
 
-    if (state === WebSocket.OPEN) {
-      socketRef.current.send(input);
+    socket.onerror = () => {
+      console.log("WebSocket error");
+      terminal.write("\r\nWebSocket error\r\n");
+    };
 
-    setMessages((oldMessages) => [
-      ...oldMessages,
-      "FROM: " + input
-    ]);
+    socket.onclose = () => {
+      console.log("WebSocket closed");
+      terminal.write("\r\nWebSocket connection closed\r\n");
+    };
 
-    setInput("");
-    return;
-  }
+    terminal.onData((data) => {
+      const state = socket.readyState;
 
+      if (state === WebSocket.CONNECTING) {
+        console.log("WebSocket is still connecting");
+        return;
+      }
 
-  if (state === WebSocket.CLOSING) {
-    console.log("WebSocket is closing");
-    return;
-  }
+      if (state === WebSocket.OPEN) {
 
-  if (state === WebSocket.CLOSED) {
-    console.log("WebSocket is closed");
-    return;
-  }
+        const input = new TextEncoder().encode(data);
+        const message = new Uint8Array(input.length + 1);
+
+        message[0]= 48;
+        message.set(input, 1);
+
+        socket.send(message.buffer);
+        return;
+      }
+
+      if (state === WebSocket.CLOSING) {
+        console.log("WebSocket is closing");
+        return;
+      }
+
+      if (state === WebSocket.CLOSED) {
+        console.log("WebSocket is closed");
+        return;
+      }
+    });
+
+  return () => {
+    socket.close();
+    terminal.dispose();
+  };
+}, []);
+
+function increaseFontSize() {
+  setFontSize((currentSize) => {
+    const newSize = currentSize + 1;
+
+    if (terminalInstanceRef.current) {
+      terminalInstanceRef.current.options.fontSize = newSize;
+    }
+
+    return newSize;
+  });
 }
-  return (
-    <div className="page">
-      <div className="chat">
-    <h1>Websocket Chat</h1>
 
-    <p>Status: {status}</p>
-    <p>WebSocket State : {socketState}</p>
+function decreaseFontSize() {
+  setFontSize((currentSize) => {
+    const newSize = Math.max(8, currentSize - 1);
 
-    <div className="message">
-      {messages.map((message, index) => (
-        <div key={index}>
-          {message}
-          </div>
-      ))}
+    if (terminalInstanceRef.current) {
+      terminalInstanceRef.current.options.fontSize = newSize;
+    }
+
+    return newSize;
+  });
+}
+
+return (
+  <div className="page">
+    <div>
+      <div className="buttons">
+        <button onClick={increaseFontSize}>A+</button>
+        <button onClick={decreaseFontSize}>A-</button>
+      </div>
+
+      <div
+      className="terminal-container"
+      ref={terminalRef}
+    ></div>
     </div>
-  
-
-    <input
-    value={input}
-    onChange={(event) => setInput(event.target.value)}
-    placeholder="Type a message"
-    />
-
-    <button onClick={sendMessage}>
-      Send
-    </button>
-    </div>
-    </div>
-  );
+  </div>
+);
 }
 
 export default App;
