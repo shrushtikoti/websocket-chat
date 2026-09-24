@@ -34,29 +34,35 @@ function App() {
 
     socket.send(initMessage);
   };
-
-
     // socket.onmessage = async (event) => {
     //   const data = new Uint8Array(await event.data.arrayBuffer());
     //   console.log("Received:", data);
     //   terminal.write(data.slice(1));
     // };
 
-    socket.onmessage=async(event)=> {
+    socket.onmessage = async (event) => {
+      try {
+        const raw =
+          event.data instanceof Blob
+            ? new Uint8Array(await event.data.arrayBuffer())
+            : new TextEncoder().encode(event.data);
 
-      try{
-        if(event.data instanceof Blob){
-          const data =new Uint8Array(await event.data.arrayBuffer());
-          terminal.write(data.slice(1))
+        if (raw.length === 0) return;
+
+        const frameType = String.fromCharCode(raw[0]);
+        const payload = raw.slice(1);
+
+        if (frameType === "0") {
+          terminal.write(payload);        
+        } else if (frameType === "1") {
+          document.title = new TextDecoder().decode(payload);   
+        } else if (frameType === "2") {
+          console.log("prefs", new TextDecoder().decode(payload));
         }
-        else{
-          terminal.write(event.data)        
-        }
+      } catch (err) {
+        console.error("Error handling message", err);
       }
-      catch(err){
-        console.error("Error handling message",err);
-      }
-    }
+    };
 
     socket.onerror = () => {
       console.log("WebSocket error");
