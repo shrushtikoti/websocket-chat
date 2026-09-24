@@ -48,5 +48,5 @@ A basic React application that connects to a WebSocket server and provides a ter
 npm install
 npm run dev
 
-
-![Terminal screenshot](images/1.png)
+```
+![Terminal screenshot](./images/1.png)
