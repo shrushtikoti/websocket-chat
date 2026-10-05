@@ -21,7 +21,7 @@ Install the dependies
 
 ![demo](./images/demo.png) -->
 
-# WebSocket Terminal
+<!-- # WebSocket Terminal
 
 A basic React application that connects to a WebSocket server and provides a terminal interface using xterm.js.
 
@@ -50,3 +50,38 @@ npm run dev
 
 ```
 ![Terminal screenshot](./images/1.png)
+ -->
+
+# WebSocket Terminal with Multiple Tabs
+
+A basic React application that connects to a WebSocket server and provides a terminal interface using xterm.js with multiple terminal tabs.
+
+# Features
+
+- Connects to the WebSocket terminal server
+- uses xterm.js  for terminal UI
+- Supports multiple terminal tabs
+- creates a separate terminal for each tab
+- Sends terminal commands through WebSocket
+- Displays terminal output
+- Handles WebSocket connection states and errors
+- A+ and A- buttons for font size
+- Add new terminals using the + button
+
+
+# Technologies
+
+- React
+- JavaScript
+- xterm.js
+- Native WebSocket API
+- Vite
+
+# How to Run
+
+```
+npm install
+npm run dev
+
+```
+![Terminal screenshot](./images/2.png)

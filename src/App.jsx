@@ -4,41 +4,56 @@ import "@xterm/xterm/css/xterm.css"
 import "./App.css";
 
 function App() {
-  const terminalRef = useRef(null);
-  const terminalInstanceRef = useRef(null);
+  const terminalRefs = useRef({});
+  const terminalInstances = useRef({});
+  const socketInstances = useRef({});
   
   const [fontSize, setFontSize] = useState(14);
+  const [tabs, setTabs] = useState([1]);
+  const [activeTab, setActiveTab] = useState(1);
 
   useEffect(() => {
+    const timer = setTimeout(() => {
+    tabs.forEach((tab) => {
+      if (terminalInstances.current[tab]) {
+        return;
+      }
+
+      const terminalElement = terminalRefs.current[tab];
+
+      if (!terminalElement) {
+        return;
+      }
+
     const terminal = new Terminal({
     fontSize: 14,
     cursorBlink: true,
   });
 
-    terminalInstanceRef.current = terminal;
+    terminalInstances.current[tab] = terminal;
 
-    terminal.open(terminalRef.current);
+      terminal.open(terminalElement);
 
+      if (tab === activeTab) {
     terminal.focus();
-
+}
+    
     const socket = new WebSocket(
       "ws://dev.cyberrange.fsid-iisc.in:8181/ws",
       "tty"
     );
 
+    socketInstances.current[tab] = socket;
+
     socket.onopen = () => {
       console.log("WebSocket connected");
+
       terminal.write("Connected to WebSocket\r\n");
 
     const initMessage = '{"AuthToken":"","columns":80,"rows":24}';
 
     socket.send(initMessage);
   };
-    // socket.onmessage = async (event) => {
-    //   const data = new Uint8Array(await event.data.arrayBuffer());
-    //   console.log("Received:", data);
-    //   terminal.write(data.slice(1));
-    // };
 
     socket.onmessage = async (event) => {
       try {
@@ -62,7 +77,7 @@ function App() {
       } catch (err) {
         console.error("Error handling message", err);
       }
-    };
+    };  
 
     socket.onerror = () => {
       console.log("WebSocket error");
@@ -89,7 +104,7 @@ function App() {
 
         message[0]= 48;
         message.set(input, 1);
-
+        
         socket.send(message.buffer);
         return;
       }
@@ -101,22 +116,43 @@ function App() {
 
       if (state === WebSocket.CLOSED) {
         console.log("WebSocket is closed");
-        return;
       }
+      });
     });
+  }, 0);
 
-  return () => {
-    socket.close();
-    terminal.dispose();
-  };
-}, []);
+    return () => {
+      clearTimeout(timer);
+    };
+  }, [tabs, activeTab]);
+        
+    useEffect(() => {
+      return () => {
+        Object.values(socketInstances.current).forEach(
+          (socket) => socket.close()
+        );
+
+        Object.values(
+          terminalInstances.current
+        ).forEach((terminal) => terminal.dispose());
+      };
+    }, []);
+
+function addTab() {
+  const newTab = tabs.length + 1;
+
+  setTabs((currentTabs) => [...currentTabs, newTab]);
+  setActiveTab(newTab);
+}
 
 function increaseFontSize() {
   setFontSize((currentSize) => {
     const newSize = currentSize + 1;
 
-    if (terminalInstanceRef.current) {
-      terminalInstanceRef.current.options.fontSize = newSize;
+    const terminal = terminalInstances.current[activeTab];
+
+    if (terminal) {
+      terminal.options.fontSize = newSize;
     }
 
     return newSize;
@@ -127,8 +163,10 @@ function decreaseFontSize() {
   setFontSize((currentSize) => {
     const newSize = Math.max(8, currentSize - 1);
 
-    if (terminalInstanceRef.current) {
-      terminalInstanceRef.current.options.fontSize = newSize;
+    const terminal = terminalInstances.current[activeTab];
+
+    if (terminal) {
+      terminal.options.fontSize = newSize;
     }
 
     return newSize;
@@ -139,17 +177,38 @@ return (
   <div className="page">
     <div>
       <div className="buttons">
+      {tabs.map((tab) => (
+        <button key={tab} onClick={() => setActiveTab(tab)}>
+        Terminal {tab}
+        </button>
+      ))}
+      <button onClick={addTab}>+</button>
+
         <button onClick={increaseFontSize}>A+</button>
         <button onClick={decreaseFontSize}>A-</button>
       </div>
 
       <div
-      className="terminal-container"
-      ref={terminalRef}
-    ></div>
-    </div>
-  </div>
-);
-}
+      className="terminal-container">
+      {tabs.map((tab) => (
+        <div
+        key={tab}
+        ref={(element) => {
+          terminalRefs.current[tab] = element;
+        }}
+
+        className={
+          activeTab === tab
+          ? "terminal-tab active"
+          : "terminal-tab"
+        }
+        ></div>
+    ))}
+      </div>
+      </div>
+      </div>
+
+    );
+  }
 
 export default App;
