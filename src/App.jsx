@@ -7,6 +7,7 @@ function App() {
   const terminalRefs = useRef({});
   const terminalInstances = useRef({});
   const socketInstances = useRef({});
+  const nextTabId = useRef(2);
   
   const [fontSize, setFontSize] = useState(14);
   const [tabs, setTabs] = useState([1]);
@@ -19,14 +20,14 @@ function App() {
         return;
       }
 
-      const terminalElement = terminalRefs.current[tab];
-
+      const terminalElement = terminalRefs.current[tab]
+      
       if (!terminalElement) {
         return;
       }
 
     const terminal = new Terminal({
-    fontSize: 14,
+    fontSize: fontSize,
     cursorBlink: true,
   });
 
@@ -86,7 +87,9 @@ function App() {
 
     socket.onclose = () => {
       console.log("WebSocket closed");
-      terminal.write("\r\nWebSocket connection closed\r\n");
+      terminal.write(
+        "\r\nWebSocket is closed.\r\n"
+      );
     };
 
     terminal.onData((data) => {
@@ -111,11 +114,17 @@ function App() {
 
       if (state === WebSocket.CLOSING) {
         console.log("WebSocket is closing");
+        terminal.write(
+          "\r\nWebSocket is closing.\r\n"
+        );
         return;
       }
 
       if (state === WebSocket.CLOSED) {
         console.log("WebSocket is closed");
+        terminal.write(
+          "\r\nWebSocket is closed.\r\n"
+        );
       }
       });
     });
@@ -125,6 +134,14 @@ function App() {
       clearTimeout(timer);
     };
   }, [tabs, activeTab]);
+
+  useEffect(() => {
+    const terminal = terminalInstances.current[activeTab];
+
+    if (terminal) {
+      terminal.focus();
+    }
+  }, [activeTab]);
         
     useEffect(() => {
       return () => {
@@ -139,9 +156,16 @@ function App() {
     }, []);
 
 function addTab() {
-  const newTab = tabs.length + 1;
+  const newTab = nextTabId.current;
+  nextTabId.current += 1;
 
-  setTabs((currentTabs) => [...currentTabs, newTab]);
+  setTabs((currentTabs) => {
+    if (currentTabs.includes(newTab)) {
+      return currentTabs;
+    }
+
+    return [...currentTabs, newTab];
+  });
   setActiveTab(newTab);
 }
 
@@ -149,11 +173,11 @@ function increaseFontSize() {
   setFontSize((currentSize) => {
     const newSize = currentSize + 1;
 
-    const terminal = terminalInstances.current[activeTab];
-
-    if (terminal) {
+    Object.values(terminalInstances.current).forEach(
+      (terminal) => {
       terminal.options.fontSize = newSize;
     }
+  );
 
     return newSize;
   });
@@ -163,11 +187,11 @@ function decreaseFontSize() {
   setFontSize((currentSize) => {
     const newSize = Math.max(8, currentSize - 1);
 
-    const terminal = terminalInstances.current[activeTab];
-
-    if (terminal) {
+    Object.values(terminalInstances.current).forEach(
+    (terminal)  => {
       terminal.options.fontSize = newSize;
     }
+  );
 
     return newSize;
   });
